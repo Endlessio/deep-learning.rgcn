@@ -53,3 +53,34 @@ class RGCNLayer(nn.Module):
         out_node_feature += self.bias
 
         return F.relu(out_node_feature)
+    
+class KnowledgeGraphRGCN(nn.Module):
+    def __init__(self, num_relations, num_nodes, hidden_dim=64, num_layers=5):
+        super().__init__()
+
+        self.num_relations = num_relations
+        self.num_nodes = num_nodes
+
+        self.node_embedding = nn.Embedding(num_nodes, hidden_dim)
+        nn.init.xavier_uniform_(self.node_embedding.weight)
+
+        self.rgcn_layer = nn.ModuleList([RGCNLayer(num_relations, num_nodes, hidden_dim) for _ in range(num_layers)])
+        self.output_layer = nn.Linear(hidden_dim, hidden_dim)
+    
+
+    def forward(self, edge_index, edge_type):
+
+        h = self.node_embedding.weight # h_0
+
+        for layer in self.rgcn_layer:
+            h = layer(h, edge_index, edge_type) # h_l
+
+        h = self.output_layer(h)
+
+        return h
+
+    def get_node_size(self):
+        return self.num_nodes
+
+    def get_edge_size(self):
+        return self.num_relations
